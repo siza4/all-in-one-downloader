@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>All-in-One Social Media Downloader</title>
+  <style>
+    body{font-family:Inter,system-ui,Arial,sans-serif;padding:20px;max-width:900px;margin:0 auto}
+    input{width:100%;padding:12px;font-size:16px}
+    button{padding:10px 14px;margin-right:8px}
+  </style>
+</head>
+<body>
+  <h1>All-in-One Social Media Downloader</h1>
+  <p>Paste a link from Facebook, YouTube, TikTok, Instagram, or Twitter and click Resolve & Download.</p>
+  <input id="url" placeholder="Paste a social media link..." />
+  <div style="margin-top:10px">
+    <button id="resolve">Resolve & Download</button>
+    <button id="clear">Clear</button>
+  </div>
+  <div id="detected" style="margin-top:12px;color:#333"></div>
+  <div id="result" style="margin-top:16px"></div>
+
+  <footer style="margin-top:40px;font-size:13px;color:#666">
+    <a href="/privacy-policy.html">Privacy Policy</a> | <a href="/terms.html">Terms</a> | <a href="/contact.html">Contact</a>
+  </footer>
+
+  <script>
+  function detectPlatform(url){
+    if(!url) return null;
+    const u = url.toLowerCase();
+    if(u.includes('facebook.com')||u.includes('fb.watch')||u.includes('fbcdn')) return 'facebook';
+    if(u.includes('youtube.com')||u.includes('youtu.be')) return 'youtube';
+    if(u.includes('tiktok.com')||u.includes('vm.tiktok.com')) return 'tiktok';
+    if(u.includes('instagram.com')||u.includes('instagr.am')) return 'instagram';
+    if(u.includes('twitter.com')||u.includes('x.com')) return 'twitter';
+    return 'unknown';
+  }
+  document.getElementById('clear').onclick = ()=>{document.getElementById('url').value='';document.getElementById('result').innerHTML='';document.getElementById('detected').textContent='';}
+  document.getElementById('resolve').onclick = async ()=>{
+    const url = document.getElementById('url').value.trim();
+    if(!url) { alert('Paste a URL'); return; }
+    const platform = detectPlatform(url);
+    document.getElementById('detected').textContent = 'Detected platform: ' + platform;
+    if(platform==='unknown'){ alert('Unable to detect platform. Paste a direct link.'); return; }
+    document.getElementById('result').textContent = 'Resolving...';
+    try{
+      const res = await fetch('/api/' + platform, {method:'POST',headers:{'Content-Type':'application/json'}, body: JSON.stringify({url})});
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error||'Failed');
+      let html = '';
+      if(data.title) html += '<div><strong>' + (data.title) + '</strong></div>';
+      if(data.thumbnail) html += '<img src="' + data.thumbnail + '" style="max-width:320px;display:block;margin:8px 0"/>';
+      if(data.type === 'video') html += '<video controls style="max-width:100%" src="' + data.url + '"></video><div style="margin-top:8px"><a href="' + data.url + '" download style="padding:8px 12px;background:#0b84ff;color:white;border-radius:6px;text-decoration:none">Download</a> <a href="' + data.url + '" target="_blank">Open</a></div>';
+      else if(data.type === 'audio') html += '<audio controls src="' + data.url + '"></audio><div style="margin-top:8px"><a href="' + data.url + '" download>Download MP3</a></div>';
+      document.getElementById('result').innerHTML = html;
+    }catch(err){ document.getElementById('result').textContent = 'Error: ' + err.message; }
+  }
+  </script>
+</body>
+</html>
